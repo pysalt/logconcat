@@ -1,2 +1,2 @@
 # logconcat
-It concatenate logs files
+It concatenate ofelia (https://github.com/mcuadros/ofelia) logs files
