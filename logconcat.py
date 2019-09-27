@@ -1,8 +1,12 @@
-from exceptions import ConfigNotFoundError
 import configparser
+import logging
 import os
 
-CONFIG_NAME = 'config.ini'
+CONFIG_PATH = 'config.ini'
+
+
+class ConfigNotFoundError(Exception):
+    pass
 
 
 class LogConcat:
@@ -15,17 +19,19 @@ class LogConcat:
         self.time_mask = None
         self.extra = {}
 
+        self._parse_config()
+
     def _parse_config(self):
         config = configparser.ConfigParser()
-        if not os.path.exists(CONFIG_NAME):
-            raise ConfigNotFoundError(f'Not found {CONFIG_NAME}.')
+        if not os.path.exists(CONFIG_PATH):
+            raise ConfigNotFoundError(f'Not found {CONFIG_PATH}.')
 
-        config.read_file(open(CONFIG_NAME))
+        config.read_file(open(CONFIG_PATH))
         try:
             for attr in self.required_fields:
                 setattr(self, attr, config['main'][attr])
         except KeyError:
-            raise ValueError(f'{self.required_fields} field must be in config.ini section main')
+            raise ValueError(f'{self.required_fields} field must be in {CONFIG_PATH} section main')
 
         if config.has_section('extra'):
             for key in config['extra']:
@@ -33,7 +39,10 @@ class LogConcat:
 
 
 def main():
-    pass
+    try:
+        concater = LogConcat()
+    except Exception as e:
+        logging.error(e)
 
 
 if __name__ == "__main__":
