@@ -8,6 +8,8 @@ CONFIG_PATH = 'config.ini'
 DEFAULTS = {
     'logs_path': '/var/log/ofelia/logs/',
     'save_path': '/var/log/ofelia/',
+    'stdout_log_name': 'stdout.log',
+    'stderr_log_name': 'stderr.log',
 }
 
 
@@ -23,6 +25,7 @@ class LogConcat:
         self._stdout_pattern = None
         self._stderr_pattern = None
         self.chunk_size = None
+        self.files_to_remove = []
         self.extra = {}
 
         self._parse_config()
@@ -43,12 +46,19 @@ class LogConcat:
     def stderr_pattern(self, new_pattern: str):
         self._stderr_pattern = re.compile(new_pattern, re.IGNORECASE)
 
+    def merge_stdout_logs(self):
+        self._merge_log_files(self.stdout_pattern, self.extra['stdout_log_name'])
+
+    def merge_stderr_logs(self):
+        self._merge_log_files(self.stderr_pattern, self.extra['stderr_log_name'])
+
     def _parse_config(self):
         config = configparser.ConfigParser()
         if not os.path.exists(CONFIG_PATH):
             raise ConfigNotFoundError(f'Not found {CONFIG_PATH}.')
 
-        config.read_file(open(CONFIG_PATH))
+        with open(CONFIG_PATH) as f:
+            config.read_file(f)
         try:
             self.stdout_pattern = config['main']['stdout_pattern']
             self.stderr_pattern = config['main']['stderr_pattern']
@@ -65,7 +75,7 @@ class LogConcat:
         for f in os.listdir(self.extra['logs_path']):
             f_path = os.path.join(self.extra['logs_path'], f)
             if os.path.isfile(f_path) and re.match(pattern, f):
-                files.append(f)
+                files.append(f_path)
 
         return self._sort_files_by_modification_time(files)
 
@@ -77,20 +87,31 @@ class LogConcat:
         if not os.path.exists(self.extra['save_path']):
             os.mkdir(self.extra['save_path'])
         files = self._get_files_list_by_pattern(pattern)
+        main_log_path = os.path.join(self.extra['save_path'], log_name)
+        logging.info(f'Start moving {len(files)} files to {main_log_path}.')
 
-        with open(self.extra['save_path'], 'a+b') as f_out:
+        with open(main_log_path, 'a+b') as f_out:
+            counter = 0
             for batch in self._chunks(files, self.chunk_size):
                 f_out.write(self._read_batch_of_files(batch))
+                self._remove_batch_of_files()
+                counter += self.chunk_size
+                logging.info(f'Processed {counter} files.')
 
     def _read_batch_of_files(self, files_batch: List[str]) -> bytes:
         buf = b''
-        for name in files_batch:
-            with open(os.path.join(self.extra['logs_path'], name), 'rb') as f:
+        for path in files_batch:
+            with open(path, 'rb') as f:
                 buf += f.read()
+            self.files_to_remove.append(path)
         return buf
 
-    def _remove_batch_of_files(self, files_batch: List[str]):
-        pass
+    def _remove_batch_of_files(self):
+        if self.files_to_remove:
+            for path in self.files_to_remove:
+                os.remove(path)
+            logging.info(f'Removed {len(self.files_to_remove)} files.')
+        logging.info('Not files to remove')
 
     @staticmethod
     def _chunks(r: List, size: int):
@@ -101,14 +122,16 @@ class LogConcat:
         while 1:
             res = r[offset: offset + size]
             if not res:
-                raise StopIteration
+                return
             yield res
             offset += size
 
 
 def main():
     try:
-        concater = LogConcat()
+        con = LogConcat()
+        con.merge_stderr_logs()
+        con.merge_stdout_logs()
     except Exception as e:
         logging.error(str(e))
 
