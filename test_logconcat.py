@@ -49,13 +49,17 @@ def log_files(input_dir):
 
 
 @pytest.fixture
-def log_data(input_dir, log_files, output_dir):
-    return TEST_CONFIG.format(STDOUT_PATTERN, STDERR_PATTERN, input_dir, output_dir, STDOUT_BASE_NAME)
+def patched_config(tmpdir_factory, input_dir, log_files, output_dir):
+    data = TEST_CONFIG.format(STDOUT_PATTERN, STDERR_PATTERN, input_dir, output_dir, STDOUT_BASE_NAME)
+    f = output_dir.join('config.ini')
+    f.write(data)
+
+    return f
 
 
 class TestLogConcat:
-    def test_merge_stdout_logs__success(self, log_files, output_dir, log_data):
-        with patch('builtins.open', mock_open(read_data=log_data)):
+    def test_merge_stdout_logs__success(self, log_files, output_dir, patched_config):
+        with patch('logconcat.CONFIG_PATH', patched_config):
             con = LogConcat()
         con.merge_stdout_logs()
 

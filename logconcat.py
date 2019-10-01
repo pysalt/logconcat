@@ -57,8 +57,7 @@ class LogConcat:
         if not os.path.exists(CONFIG_PATH):
             raise ConfigNotFoundError(f'Not found {CONFIG_PATH}.')
 
-        with open(CONFIG_PATH) as f:
-            config.read_file(f)
+        config.read(CONFIG_PATH)
         try:
             self.stdout_pattern = config['main']['stdout_pattern']
             self.stderr_pattern = config['main']['stderr_pattern']
