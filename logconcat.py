@@ -16,6 +16,19 @@ DEFAULTS = {
 DEFAULT_SCHEDULER_PATTER = r'\.json$'
 
 
+def setup_logger(logger):
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d_%H:%M:%S')
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+
+app_logger = logging.getLogger(__name__)
+setup_logger(app_logger)
+
+
 class ConfigNotFoundError(Exception):
     pass
 
@@ -93,7 +106,7 @@ class LogConcat:
         files = self._get_files_list_by_pattern(self.scheduler_patter)
         for path in files:
             os.remove(path)
-        logging.info(f'Removed {len(files)} files of the schedulers logs')
+        app_logger.info(f'Removed {len(files)} files of the schedulers logs')
 
     def _parse_config(self):
         config = configparser.ConfigParser()
@@ -153,7 +166,7 @@ class LogConcat:
             os.mkdir(self.extra['save_path'])
         files = self._get_files_list_by_pattern_sorted(pattern)
         main_log_path = os.path.join(self.extra['save_path'], log_name)
-        logging.info(f'Start moving {len(files)} files to {main_log_path}.')
+        app_logger.info(f'Start moving {len(files)} files to {main_log_path}.')
 
         with open(main_log_path, 'a+b') as f_out:
             counter = 0
@@ -161,7 +174,7 @@ class LogConcat:
                 f_out.write(self._read_batch_of_files(batch))
                 self._remove_batch_of_files()
                 counter += self.chunk_size
-                logging.info(f'Processed {counter} files.')
+                app_logger.info(f'Processed {counter} files.')
 
     def _read_batch_of_files(self, files_batch: List[str]) -> bytes:
         buf = b''
@@ -175,8 +188,8 @@ class LogConcat:
         if self.files_to_remove:
             while self.files_to_remove:
                 os.remove(self.files_to_remove.pop())
-            logging.info(f'Removed {len(self.files_to_remove)} files.')
-        logging.info('Not files to remove')
+            app_logger.info(f'Removed {len(self.files_to_remove)} files.')
+        app_logger.info('Not files to remove')
 
     @staticmethod
     def _chunks(r: List, size: int):
@@ -194,12 +207,14 @@ class LogConcat:
 
 def main():
     try:
+        app_logger.info('Start processing logs.')
         con = LogConcat()
         con.merge_stderr_logs()
         con.merge_stdout_logs()
         con.remove_scheduler_logs()
+        app_logger.info('End task.')
     except Exception as e:
-        logging.error(str(e))
+        app_logger.error(str(e))
 
 
 if __name__ == "__main__":
