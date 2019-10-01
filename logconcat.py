@@ -151,7 +151,7 @@ class LogConcat:
     def _merge_log_files(self, pattern, log_name: str):
         if not os.path.exists(self.extra['save_path']):
             os.mkdir(self.extra['save_path'])
-        files = self._get_files_list_by_pattern(pattern)
+        files = self._get_files_list_by_pattern_sorted(pattern)
         main_log_path = os.path.join(self.extra['save_path'], log_name)
         logging.info(f'Start moving {len(files)} files to {main_log_path}.')
 
@@ -173,8 +173,8 @@ class LogConcat:
 
     def _remove_batch_of_files(self):
         if self.files_to_remove:
-            for path in self.files_to_remove:
-                os.remove(path)
+            while self.files_to_remove:
+                os.remove(self.files_to_remove.pop())
             logging.info(f'Removed {len(self.files_to_remove)} files.')
         logging.info('Not files to remove')
 
