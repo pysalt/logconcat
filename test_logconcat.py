@@ -2,20 +2,21 @@ import os
 
 import pytest
 import time
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 
 from logconcat import LogConcat
 
 STDOUT_BASE_NAME = 'stdout_log.log'
 STDERR_BASE_NAME = 'stderr_log.log'
-STDOUT_PATTERN = r'.*stdout_log\.log'
-STDERR_PATTERN = r'.*stderr_log\.log'
+STDOUT_PATTERN = r'.*stdout_log\.log$'
+STDERR_PATTERN = r'.*stderr_log\.log$'
 
 TEST_CONFIG = """
 [main]
 stdout_pattern = {}
 stderr_pattern = {}
 chunk = 10
+sort_by_time_mask = True
 
 [extra]
 logs_path = {}
@@ -35,15 +36,21 @@ def output_dir(tmpdir_factory):
 
 
 @pytest.fixture
+def scheduler_log(input_dir):
+    f = input_dir.join('scheduler_log.json')
+    f.write('test data')
+    return f
+
+
+@pytest.fixture
 def log_files(input_dir):
     files = {}
     for i in range(1, 4):
-        name = str(i) + STDOUT_BASE_NAME
+        name = f'20191001_072{i}26_' + STDOUT_BASE_NAME
         f = input_dir.join(name)
         data = str(i) * 20
         files[str(f)] = data
         f.write(data)
-        time.sleep(0.0001)
 
     return files
 
@@ -67,3 +74,10 @@ class TestLogConcat:
         for path, data in log_files.items():
             assert not os.path.exists(path)
             assert data in res
+
+    def test_remove_scheduler_logs__success(self, patched_config, scheduler_log):
+        with patch('logconcat.CONFIG_PATH', patched_config):
+            con = LogConcat()
+        con.remove_scheduler_logs()
+
+        assert not os.path.exists(scheduler_log)
