@@ -66,7 +66,7 @@ def patched_config(tmpdir_factory, input_dir, log_files, output_dir):
 
 class TestLogConcat:
     def test_merge_stdout_logs__success(self, log_files, output_dir, patched_config):
-        with patch('logconcat.CONFIG_PATH', patched_config):
+        with patch('logconcat.LogConcat._get_config_path', return_value=patched_config):
             con = LogConcat()
         con.merge_stdout_logs()
 
@@ -76,7 +76,7 @@ class TestLogConcat:
             assert data in res
 
     def test_remove_scheduler_logs__success(self, patched_config, scheduler_log):
-        with patch('logconcat.CONFIG_PATH', patched_config):
+        with patch('logconcat.LogConcat._get_config_path', return_value=patched_config):
             con = LogConcat()
         con.remove_scheduler_logs()
 

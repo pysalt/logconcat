@@ -5,7 +5,7 @@ import re
 from typing import List, Optional
 from datetime import datetime
 
-CONFIG_PATH = 'config.ini'
+CONFIG_NAME = 'config.ini'
 DEFAULTS = {
     'logs_path': '/var/log/ofelia/logs/',
     'save_path': '/var/log/ofelia/',
@@ -110,21 +110,32 @@ class LogConcat:
 
     def _parse_config(self):
         config = configparser.ConfigParser()
-        if not os.path.exists(CONFIG_PATH):
-            raise ConfigNotFoundError(f'Not found {CONFIG_PATH}.')
+        config_path = self._get_config_path()
 
-        config.read(CONFIG_PATH)
+        config.read(config_path)
         try:
             self.stdout_pattern = config['main']['stdout_pattern']
             self.stderr_pattern = config['main']['stderr_pattern']
             self.chunk_size = config.getint('main', 'chunk')
         except KeyError:
-            raise ValueError(f'{self.required_fields} field must be in {CONFIG_PATH} section main')
+            raise ValueError(f'{self.required_fields} field must be in {CONFIG_NAME} section main')
         self.sort_by_time_mask = config.getboolean('main', 'sort_by_time_mask', fallback=False)
         self.scheduler_patter = config.get('main', 'scheduler_patter', fallback=DEFAULT_SCHEDULER_PATTER)
 
         for key in DEFAULTS:
             self.extra[key] = config.get('extra', key, fallback=None) or DEFAULTS[key]
+
+    @staticmethod
+    def _get_config_path():
+        """
+        in the current version, the code expects that the config is next to the script
+        :return:
+        """
+        base = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(base, CONFIG_NAME)
+        if not os.path.exists(path):
+            raise ConfigNotFoundError(f'Not found {CONFIG_NAME} in path={base}.')
+        os.path.dirname(os.path.abspath(__file__))
 
     def _configure(self):
         if self.sort_by_time_mask:
