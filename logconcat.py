@@ -135,7 +135,6 @@ class LogConcat:
         path = os.path.join(base, CONFIG_NAME)
         if not os.path.exists(path):
             raise ConfigNotFoundError(f'Not found {CONFIG_NAME} in path={base}.')
-        os.path.dirname(os.path.abspath(__file__))
 
     def _configure(self):
         if self.sort_by_time_mask:
