@@ -197,11 +197,14 @@ class LogConcat:
         return buf
 
     def _remove_batch_of_files(self):
-        if self.files_to_remove:
-            while self.files_to_remove:
-                os.remove(self.files_to_remove.pop())
-            app_logger.info(f'Removed {len(self.files_to_remove)} files.')
-        app_logger.info('Not files to remove')
+        if not self.files_to_remove:
+            app_logger.info('Not files to remove')
+            return
+
+        app_logger.info(f'Start removing {len(self.files_to_remove)} files.')
+        while self.files_to_remove:
+            os.remove(self.files_to_remove.pop())
+        app_logger.info(f'All files removed.')
 
     @staticmethod
     def _chunks(r: List, size: int):
