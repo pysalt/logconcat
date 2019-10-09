@@ -126,7 +126,7 @@ class LogConcat:
             self.extra[key] = config.get('extra', key, fallback=None) or DEFAULTS[key]
 
     @staticmethod
-    def _get_config_path():
+    def _get_config_path() -> str:
         """
         in the current version, the code expects that the config is next to the script
         :return:
@@ -135,6 +135,8 @@ class LogConcat:
         path = os.path.join(base, CONFIG_NAME)
         if not os.path.exists(path):
             raise ConfigNotFoundError(f'Not found {CONFIG_NAME} in path={base}.')
+
+        return path
 
     def _configure(self):
         if self.sort_by_time_mask:
@@ -224,7 +226,7 @@ def main():
         con.remove_scheduler_logs()
         app_logger.info('End task.')
     except Exception as e:
-        app_logger.error(str(e))
+        app_logger.exception(e)
 
 
 if __name__ == "__main__":
